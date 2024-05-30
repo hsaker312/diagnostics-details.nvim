@@ -342,17 +342,17 @@ local function set_buffer_options(buf, lines, highlights)
         silent = true,
     })
 
-    vim.api.nvim_buf_set_keymap(buf, "n", "<2-LeftDiagnostics_Detailsouse>", "<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>", {
+    vim.api.nvim_buf_set_keymap(buf, "n", "<2-LeftMouse>", "<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>", {
         noremap = true,
         silent = true,
     })
 
-    vim.api.nvim_buf_set_keymap(buf, "i", "<2-LeftDiagnostics_Detailsouse>", "<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>", {
+    vim.api.nvim_buf_set_keymap(buf, "i", "<2-LeftMouse>", "<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>", {
         noremap = true,
         silent = true,
     })
 
-    vim.api.nvim_buf_set_keymap(buf, "v", "<2-LeftDiagnostics_Detailsouse>", "<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>", {
+    vim.api.nvim_buf_set_keymap(buf, "v", "<2-LeftMouse>", "<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>", {
         noremap = true,
         silent = true,
     })
@@ -428,7 +428,7 @@ function Diagnostics_Details.show()
 
         table.insert(
             autocmds,
-            vim.api.nvim_create_autocmd("CursorDiagnostics_Detailsoved", {
+            vim.api.nvim_create_autocmd("CursorMoved", {
                 callback = function()
                     if
                         diagnostics_details_win_id ~= nil
