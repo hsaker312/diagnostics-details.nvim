@@ -1,5 +1,5 @@
 ---@class Diagnostics_Details
-M = {}
+Diagnostics_Details = {}
 
 ---@class Diagnostics_Highlight
 ---@field highlight string
@@ -202,7 +202,7 @@ end
 ---@type fun()[]
 local callbacks = {}
 
-function M.diagnostics_line_callback()
+function Diagnostics_Details.diagnostics_line_callback()
     local line = vim.fn.line(".")
 
     if type(callbacks[line]) == "function" then
@@ -327,32 +327,32 @@ local function set_buffer_options(buf, lines, highlights)
         buf = buf,
     })
 
-    vim.api.nvim_buf_set_keymap(buf, "n", "<CR>", "<Cmd>lua M.diagnostics_line_callback()<CR>", {
+    vim.api.nvim_buf_set_keymap(buf, "n", "<CR>", "<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>", {
         noremap = true,
         silent = true,
     })
 
-    vim.api.nvim_buf_set_keymap(buf, "i", "<CR>", "<Cmd>lua M.diagnostics_line_callback()<CR>", {
+    vim.api.nvim_buf_set_keymap(buf, "i", "<CR>", "<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>", {
         noremap = true,
         silent = true,
     })
 
-    vim.api.nvim_buf_set_keymap(buf, "v", "<CR>", "<Cmd>lua M.diagnostics_line_callback()<CR>", {
+    vim.api.nvim_buf_set_keymap(buf, "v", "<CR>", "<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>", {
         noremap = true,
         silent = true,
     })
 
-    vim.api.nvim_buf_set_keymap(buf, "n", "<2-LeftMouse>", "<Cmd>lua M.diagnostics_line_callback()<CR>", {
+    vim.api.nvim_buf_set_keymap(buf, "n", "<2-LeftDiagnostics_Detailsouse>", "<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>", {
         noremap = true,
         silent = true,
     })
 
-    vim.api.nvim_buf_set_keymap(buf, "i", "<2-LeftMouse>", "<Cmd>lua M.diagnostics_line_callback()<CR>", {
+    vim.api.nvim_buf_set_keymap(buf, "i", "<2-LeftDiagnostics_Detailsouse>", "<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>", {
         noremap = true,
         silent = true,
     })
 
-    vim.api.nvim_buf_set_keymap(buf, "v", "<2-LeftMouse>", "<Cmd>lua M.diagnostics_line_callback()<CR>", {
+    vim.api.nvim_buf_set_keymap(buf, "v", "<2-LeftDiagnostics_Detailsouse>", "<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>", {
         noremap = true,
         silent = true,
     })
@@ -399,7 +399,7 @@ local function set_buffer_options(buf, lines, highlights)
     end
 end
 
-function M.show()
+function Diagnostics_Details.show()
     main_win_id = vim.api.nvim_get_current_win()
 
     local lines, highlights, lines_count, max_line_len = get_diagnostics_lines()
@@ -428,7 +428,7 @@ function M.show()
 
         table.insert(
             autocmds,
-            vim.api.nvim_create_autocmd("CursorMoved", {
+            vim.api.nvim_create_autocmd("CursorDiagnostics_Detailsoved", {
                 callback = function()
                     if
                         diagnostics_details_win_id ~= nil
@@ -464,4 +464,8 @@ function M.show()
     end
 end
 
-return M
+function Diagnostics_Details.setup()
+end
+
+
+return Diagnostics_Details
