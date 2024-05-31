@@ -53,9 +53,7 @@ local function entry_str(value)
         return ""
     end
 
-    local str = tostring(value)
-
-    local res = str:gsub("\r\n", " "):gsub("\n\r", ""):gsub("\n", " "):gsub("\r", " ")
+    local res = tostring(value):gsub("\r", "")
 
     return res
 end
@@ -100,10 +98,17 @@ local function get_diagnostics_entries()
             source = source:sub(1, #source - 1)
         end
 
-        entry.text_objs[1] = {
-            text = entry_str(source) .. ": ",
-            hl_group = "NormalFloat",
-        }
+        if source ~= "" then
+            entry.text_objs[1] = {
+                text = entry_str(source) .. ": ",
+                hl_group = "NormalFloat",
+            }
+        else
+            entry.text_objs[1] = {
+                text = "vim diagnostics" .. ": ",
+                hl_group = "Comment",
+            }
+        end
 
         entry.text_objs[2] = {
             text = entry_str(diagnostic.message),
@@ -350,15 +355,45 @@ local function get_diagnostics_lines()
             local line = current_tab
 
             for _, text_obj in ipairs(diagnostics_entry.text_objs) do
-                local line_len = #line
-                line = line .. text_obj.text
+                if text_obj.text:match("\n") == nil then
+                    local line_len = #line
+                    line = line .. text_obj.text
 
-                append_highlight({
-                    highlight = text_obj.hl_group,
-                    line_num = lines_count,
-                    col_begin = line_len,
-                    col_end = #line,
-                })
+                    append_highlight({
+                        highlight = text_obj.hl_group,
+                        line_num = lines_count,
+                        col_begin = line_len,
+                        col_end = #line,
+                    })
+                else
+                    ---@type string[]
+                    local text_lines = {}
+                    local text_lines_count = 0
+
+                    for text_line in text_lines do
+                        table.insert(text_lines, text_line)
+                        text_lines_count = text_lines_count + 1
+                    end
+
+                    for text_index, text_line in ipairs(text_lines) do
+                        local line_len = #line
+                        line = line .. text_line
+
+                        append_highlight({
+                            highlight = text_obj.hl_group,
+                            line_num = lines_count,
+                            col_begin = line_len,
+                            col_end = #line,
+                        })
+
+                        if text_index < text_lines_count then
+                            append_line(line)
+                            append_callback(make_line_callback(diagnostics_entry))
+
+                            line = current_tab .. tab
+                        end
+                    end
+                end
             end
 
             append_line(line)
