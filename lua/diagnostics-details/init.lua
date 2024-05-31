@@ -115,10 +115,14 @@ local function get_diagnostics_entries()
             hl_group = hl_group(diagnostic),
         }
 
-        entry.text_objs[3] = {
-            text = " [" .. entry_str(diagnostic.code) .. "]",
-            hl_group = "NormalFloat",
-        }
+        local code_str = entry_str(diagnostic.code)
+
+        if code_str ~= "" then
+            entry.text_objs[3] = {
+                text = " [" .. code_str .. "]",
+                hl_group = "NormalFloat",
+            }
+        end
 
         entry.range = {
             first = {
