@@ -34,204 +34,219 @@ local diagnostics_details_win_id = nil
 ---@type integer[]
 local autocmds = {}
 
----@param path string
+---@param path string?
 ---@return string
 local function posix_path(path)
-	if type(path) == "string" then
-		local res = path:gsub("\\", "/")
-		return res
-	end
+    if type(path) == "string" then
+        local res = path:gsub("\\", "/")
+        return res
+    end
 
-	return ""
+    return ""
+end
+
+---comment
+---@param value any
+---@return string
+local function entry_str(value)
+    if value == nil then
+        return ""
+    end
+
+    local str = tostring(value)
+
+    local res = str:gsub("\r\n", " "):gsub("\n\r", ""):gsub("\n", " "):gsub("\r", " ")
+
+    return res
 end
 
 ---@return Diagnostics_Entry[]
 local function get_diagnostics_entries()
-	---@param diagnostic vim.Diagnostic
-	---@return string
-	local function hl_group(diagnostic)
-		if diagnostic.severity ~= nil then
-			if diagnostic.severity == 1 then
-				return "DiagnosticFloatingError"
-			elseif diagnostic.severity == 2 then
-				return "DiagnosticFloatingWarn"
-			elseif diagnostic.severity == 3 then
-				return "DiagnosticFloatingInfo"
-			elseif diagnostic.severity == 4 then
-				return "DiagnosticFloatingHint"
-			end
-		end
+    ---@param diagnostic vim.Diagnostic
+    ---@return string
+    local function hl_group(diagnostic)
+        if diagnostic.severity ~= nil then
+            if diagnostic.severity == 1 then
+                return "DiagnosticFloatingError"
+            elseif diagnostic.severity == 2 then
+                return "DiagnosticFloatingWarn"
+            elseif diagnostic.severity == 3 then
+                return "DiagnosticFloatingInfo"
+            elseif diagnostic.severity == 4 then
+                return "DiagnosticFloatingHint"
+            end
+        end
 
-		return "NormalFloat"
-	end
+        return "NormalFloat"
+    end
 
-	---@type Diagnostics_Entry[]
-	local entries = {}
-	local diagnostics = vim.diagnostic.get(0, { lnum = vim.fn.line(".") - 1 })
+    ---@type Diagnostics_Entry[]
+    local entries = {}
+    local diagnostics = vim.diagnostic.get(0, { lnum = vim.fn.line(".") - 1 })
 
-	for _, diagnostic in ipairs(diagnostics) do
-		---@type Diagnostics_Entry
-		local entry = {
-			uri = posix_path(vim.api.nvim_buf_get_name(0)),
-			text_objs = {},
-			children = {},
-		}
+    for _, diagnostic in ipairs(diagnostics) do
+        ---@type Diagnostics_Entry
+        local entry = {
+            uri = posix_path(vim.api.nvim_buf_get_name(0)),
+            text_objs = {},
+            children = {},
+        }
 
-		table.insert(entries, entry)
+        table.insert(entries, entry)
 
-		local source = diagnostic.source or ""
+        local source = diagnostic.source or ""
 
-		if source:sub(#source, #source) == "." or source:sub(#source, #source) == ":" then
-			source = source:sub(1, #source - 1)
-		end
+        if source:sub(#source, #source) == "." or source:sub(#source, #source) == ":" then
+            source = source:sub(1, #source - 1)
+        end
 
-		entry.text_objs[1] = {
-			text = source .. ": ",
-			hl_group = "NormalFloat",
-		}
+        entry.text_objs[1] = {
+            text = entry_str(source) .. ": ",
+            hl_group = "NormalFloat",
+        }
 
-		entry.text_objs[2] = {
-			text = diagnostic.message,
-			hl_group = hl_group(diagnostic),
-		}
+        entry.text_objs[2] = {
+            text = entry_str(diagnostic.message),
+            hl_group = hl_group(diagnostic),
+        }
 
-		entry.text_objs[3] = {
-			text = " [" .. diagnostic.code .. "]",
-			hl_group = "NormalFloat",
-		}
+        entry.text_objs[3] = {
+            text = " [" .. entry_str(diagnostic.code) .. "]",
+            hl_group = "NormalFloat",
+        }
 
-		entry.range = {
-			first = {
-				line = diagnostic.lnum + 1,
-				col = diagnostic.col,
-			},
-			last = {
-				line = diagnostic.end_lnum + 1,
-				col = diagnostic.end_col,
-			},
-		}
+        entry.range = {
+            first = {
+                line = diagnostic.lnum + 1,
+                col = diagnostic.col,
+            },
+            last = {
+                line = diagnostic.end_lnum + 1,
+                col = diagnostic.end_col,
+            },
+        }
 
-		local user_data = diagnostic.user_data
+        local user_data = diagnostic.user_data
 
-		if user_data.lsp ~= nil then
-			local lsp = user_data.lsp
+        if user_data.lsp ~= nil then
+            local lsp = user_data.lsp
 
-			if type(lsp.code) == "string" and lsp.codeDescription ~= nil then
-				if type(lsp.codeDescription.href) == "string" then
-					---@type Diagnostics_Entry
-					local child = {
-						uri = lsp.codeDescription.href,
-						text_objs = {},
-					}
+            if type(lsp.code) == "string" and lsp.codeDescription ~= nil then
+                if type(lsp.codeDescription.href) == "string" then
+                    ---@type Diagnostics_Entry
+                    local child = {
+                        uri = lsp.codeDescription.href,
+                        text_objs = {},
+                    }
 
-					table.insert(entry.children, child)
+                    table.insert(entry.children, child)
 
-					child.text_objs[1] = {
-						text = lsp.code,
-						hl_group = hl_group(diagnostic),
-					}
+                    child.text_objs[1] = {
+                        text = entry_str(lsp.code),
+                        hl_group = hl_group(diagnostic),
+                    }
 
-					child.text_objs[2] = {
-						text = " (" .. lsp.codeDescription.href .. ")",
-						hl_group = "Comment",
-					}
-				end
-			end
+                    child.text_objs[2] = {
+                        text = " (" .. entry_str(lsp.codeDescription.href) .. ")",
+                        hl_group = "Comment",
+                    }
+                end
+            end
 
-			if type(lsp.relatedInformation) == "table" then
-				local related_information = lsp.relatedInformation
+            if type(lsp.relatedInformation) == "table" then
+                local related_information = lsp.relatedInformation
 
-				for _, information in pairs(related_information) do
-					local location = information.location
-					local message = information.message
+                for _, information in pairs(related_information) do
+                    local location = information.location
+                    local message = information.message
 
-					if type(message) == "string" and type(location) == "table" then
-						if type(location.uri) == "string" then
-							---@type Diagnostics_Entry
-							local child = {
-								uri = posix_path(location.uri),
-								text_objs = {},
-							}
+                    if type(message) == "string" and type(location) == "table" then
+                        if type(location.uri) == "string" then
+                            ---@type Diagnostics_Entry
+                            local child = {
+                                uri = posix_path(location.uri),
+                                text_objs = {},
+                            }
 
-							table.insert(entry.children, child)
+                            table.insert(entry.children, child)
 
-							child.text_objs[1] = {
-								text = child.uri:match("^.+/(.+)$"),
-								hl_group = "Underlined",
-							}
+                            child.text_objs[1] = {
+                                text = entry_str(child.uri:match("^.+/(.+)$")),
+                                hl_group = "Underlined",
+                            }
 
-							child.text_objs[2] = {
-								text = "",
-								hl_group = "Underlined",
-							}
+                            child.text_objs[2] = {
+                                text = "",
+                                hl_group = "Underlined",
+                            }
 
-							if message ~= "" then
-								child.text_objs[3] = {
-									text = ": ",
-									hl_group = "NormalFloat",
-								}
+                            if message ~= "" then
+                                child.text_objs[3] = {
+                                    text = ": ",
+                                    hl_group = "NormalFloat",
+                                }
 
-								child.text_objs[4] = {
-									text = message,
-									hl_group = hl_group(diagnostic),
-								}
-							end
+                                child.text_objs[4] = {
+                                    text = entry_str(message),
+                                    hl_group = hl_group(diagnostic),
+                                }
+                            end
 
-							local range = location.range
+                            local range = location.range
 
-							if type(range) == "table" then
-								local first = range.start
-								local last = range["end"]
+                            if type(range) == "table" then
+                                local first = range.start
+                                local last = range["end"]
 
-								if type(first) == "table" and type(last) == "table" then
-									if type(first.line) == "number" and type(first.character) == "number" then
-										child.text_objs[2].text = "("
-											.. tostring(first.line + 1)
-											.. ", "
-											.. tostring(first.character + 1)
-											.. ")"
+                                if type(first) == "table" and type(last) == "table" then
+                                    if type(first.line) == "number" and type(first.character) == "number" then
+                                        child.text_objs[2].text = "("
+                                            .. tostring(first.line + 1)
+                                            .. ", "
+                                            .. tostring(first.character + 1)
+                                            .. ")"
 
-										child.range = {
-											first = {
-												line = first.line + 1,
-												col = first.character + 1,
-											},
-											last = {
-												line = first.line + 1,
-												col = first.character + 1,
-											},
-										}
+                                        child.range = {
+                                            first = {
+                                                line = first.line + 1,
+                                                col = first.character + 1,
+                                            },
+                                            last = {
+                                                line = first.line + 1,
+                                                col = first.character + 1,
+                                            },
+                                        }
 
-										if type(last.line) == "number" and type(last.character) == "number" then
-											child.range.last.line = last.line + 1
-											child.range.last.col = last.character + 1
-										end
-									end
-								end
-							end
-						end
-					end
-				end
-			end
-		end
-	end
+                                        if type(last.line) == "number" and type(last.character) == "number" then
+                                            child.range.last.line = last.line + 1
+                                            child.range.last.col = last.character + 1
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
 
-	return entries
+    return entries
 end
 
 ---comment
 ---@param file string
 ---@return integer?
 local function get_file_buffer(file)
-	local buffers = vim.api.nvim_list_bufs() -- Get a list of all buffer numbers
+    local buffers = vim.api.nvim_list_bufs() -- Get a list of all buffer numbers
 
-	for _, buf in ipairs(buffers) do
-		if vim.api.nvim_buf_is_loaded(buf) and vim.api.nvim_buf_get_name(buf) ~= "" then
-			if vim.api.nvim_buf_get_name(buf) == file then
-				return buf
-			end
-		end
-	end
+    for _, buf in ipairs(buffers) do
+        if vim.api.nvim_buf_is_loaded(buf) and vim.api.nvim_buf_get_name(buf) ~= "" then
+            if vim.api.nvim_buf_get_name(buf) == file then
+                return buf
+            end
+        end
+    end
 end
 
 ---@type fun()[]
@@ -240,58 +255,58 @@ local callbacks = {}
 ---@param diagnostics_entry Diagnostics_Entry
 ---@return fun()
 local function make_line_callback(diagnostics_entry)
-	return function()
-		local file = diagnostics_entry.uri:gsub("file://", "")
+    return function()
+        local file = diagnostics_entry.uri:gsub("file://", "")
 
-		if file:match("^https?://[%w-_%.%?%.:/%+=&]+$") then
-			if diagnostics_details_win_id ~= nil then
-				vim.ui.open(diagnostics_entry.uri)
-				return
-			end
-		end
+        if file:match("^https?://[%w-_%.%?%.:/%+=&]+$") then
+            if diagnostics_details_win_id ~= nil then
+                vim.ui.open(diagnostics_entry.uri)
+                return
+            end
+        end
 
-		local file_buf = get_file_buffer(file)
+        local file_buf = get_file_buffer(file)
 
-		if file_buf == nil then
-			vim.api.nvim_set_current_win(main_win_id)
-			vim.api.nvim_command("edit " .. file)
-		else
-			vim.api.nvim_set_current_win(main_win_id)
-			vim.api.nvim_win_set_buf(main_win_id, file_buf)
-		end
+        if file_buf == nil then
+            vim.api.nvim_set_current_win(main_win_id)
+            vim.api.nvim_command("edit " .. file)
+        else
+            vim.api.nvim_set_current_win(main_win_id)
+            vim.api.nvim_win_set_buf(main_win_id, file_buf)
+        end
 
-		vim.schedule(function()
-			if diagnostics_entry.range ~= nil then
-				vim.api.nvim_command(
-					"call cursor("
-						.. tostring(diagnostics_entry.range.first.line)
-						.. ","
-						.. tostring(diagnostics_entry.range.first.col)
-						.. ")"
-				)
+        vim.schedule(function()
+            if diagnostics_entry.range ~= nil then
+                vim.api.nvim_command(
+                    "call cursor("
+                        .. tostring(diagnostics_entry.range.first.line)
+                        .. ","
+                        .. tostring(diagnostics_entry.range.first.col)
+                        .. ")"
+                )
 
-				if
-					diagnostics_entry.range.last.line ~= diagnostics_entry.range.first.line
-					or (diagnostics_entry.range.last.col - diagnostics_entry.range.first.col) > 2
-				then
-					vim.api.nvim_command("normal! v")
+                if
+                    diagnostics_entry.range.last.line ~= diagnostics_entry.range.first.line
+                    or (diagnostics_entry.range.last.col - diagnostics_entry.range.first.col) > 2
+                then
+                    vim.api.nvim_command("normal! v")
 
-					vim.api.nvim_win_set_cursor(
-						main_win_id,
-						{ diagnostics_entry.range.last.line, diagnostics_entry.range.last.col }
-					)
-				end
-			end
-		end)
-	end
+                    vim.api.nvim_win_set_cursor(
+                        main_win_id,
+                        { diagnostics_entry.range.last.line, diagnostics_entry.range.last.col }
+                    )
+                end
+            end
+        end)
+    end
 end
 
 function Diagnostics_Details.diagnostics_line_callback()
-	local line = vim.fn.line(".")
+    local line = vim.fn.line(".")
 
-	if type(callbacks[line]) == "function" then
-		callbacks[line]()
-	end
+    if type(callbacks[line]) == "function" then
+        callbacks[line]()
+    end
 end
 
 ---@return string[]
@@ -299,241 +314,243 @@ end
 ---@return integer
 ---@return integer
 local function get_diagnostics_lines()
-	---@type string[]
-	local lines = {}
+    ---@type string[]
+    local lines = {}
 
-	---@type Diagnostics_Highlight[]
-	local highlights = {}
+    ---@type Diagnostics_Highlight[]
+    local highlights = {}
 
-	callbacks = {}
+    callbacks = {}
 
-	local lines_count = 0
-	local tab = "   "
-	local max_line_len = 0
+    local lines_count = 0
+    local tab = "   "
+    local max_line_len = 0
 
-	---@param line string
-	local function append_line(line)
-		table.insert(lines, line)
-		lines_count = lines_count + 1
-		max_line_len = math.max(max_line_len, #lines[lines_count])
-	end
+    ---@param line string
+    local function append_line(line)
+        table.insert(lines, line)
+        lines_count = lines_count + 1
+        max_line_len = math.max(max_line_len, #lines[lines_count])
+    end
 
-	---@param highlight Diagnostics_Highlight
-	local function append_highlight(highlight)
-		table.insert(highlights, highlight)
-	end
+    ---@param highlight Diagnostics_Highlight
+    local function append_highlight(highlight)
+        table.insert(highlights, highlight)
+    end
 
-	---@param callback fun()
-	local function append_callback(callback)
-		table.insert(callbacks, callback)
-	end
+    ---@param callback fun()
+    local function append_callback(callback)
+        table.insert(callbacks, callback)
+    end
 
-	---@param diagnostics_entries Diagnostics_Entry[]
-	---@param current_tab string
-	local function make_lines(diagnostics_entries, current_tab)
-		for _, diagnostics_entry in ipairs(diagnostics_entries) do
-			local line = current_tab
+    ---@param diagnostics_entries Diagnostics_Entry[]
+    ---@param current_tab string
+    local function make_lines(diagnostics_entries, current_tab)
+        for _, diagnostics_entry in ipairs(diagnostics_entries) do
+            local line = current_tab
 
-			for _, text_obj in ipairs(diagnostics_entry.text_objs) do
-				local line_len = #line
-				line = line .. text_obj.text
+            for _, text_obj in ipairs(diagnostics_entry.text_objs) do
+                local line_len = #line
+                line = line .. text_obj.text
 
-				append_highlight({
-					highlight = text_obj.hl_group,
-					line_num = lines_count,
-					col_begin = line_len,
-					col_end = #line,
-				})
-			end
+                append_highlight({
+                    highlight = text_obj.hl_group,
+                    line_num = lines_count,
+                    col_begin = line_len,
+                    col_end = #line,
+                })
+            end
 
-			append_line(line)
-			append_callback(make_line_callback(diagnostics_entry))
+            append_line(line)
+            append_callback(make_line_callback(diagnostics_entry))
 
-			if diagnostics_entry.children ~= nil then
-				make_lines(diagnostics_entry.children, current_tab .. tab)
-			end
-		end
-	end
+            if diagnostics_entry.children ~= nil then
+                make_lines(diagnostics_entry.children, current_tab .. tab)
+            end
+        end
+    end
 
-	make_lines(get_diagnostics_entries(), "")
+    make_lines(get_diagnostics_entries(), "")
 
-	return lines, highlights, lines_count, max_line_len
+    return lines, highlights, lines_count, max_line_len
 end
 
 ---@param buf integer
 ---@param lines string[]
 ---@param highlights Diagnostics_Highlight[]
 local function set_buffer_options(buf, lines, highlights)
-	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
 
-	vim.api.nvim_set_option_value("modifiable", false, {
-		buf = buf,
-	})
+    vim.api.nvim_set_option_value("modifiable", false, {
+        buf = buf,
+    })
 
-	vim.api.nvim_set_option_value("buftype", "nofile", {
-		buf = buf,
-	})
+    vim.api.nvim_set_option_value("buftype", "nofile", {
+        buf = buf,
+    })
 
-	vim.api.nvim_buf_set_keymap(buf, "n", "<CR>", "<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>", {
-		noremap = true,
-		silent = true,
-	})
+    vim.api.nvim_buf_set_keymap(buf, "n", "<CR>", "<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>", {
+        noremap = true,
+        silent = true,
+    })
 
-	vim.api.nvim_buf_set_keymap(buf, "i", "<CR>", "<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>", {
-		noremap = true,
-		silent = true,
-	})
+    vim.api.nvim_buf_set_keymap(buf, "i", "<CR>", "<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>", {
+        noremap = true,
+        silent = true,
+    })
 
-	vim.api.nvim_buf_set_keymap(buf, "v", "<CR>", "<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>", {
-		noremap = true,
-		silent = true,
-	})
+    vim.api.nvim_buf_set_keymap(buf, "v", "<CR>", "<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>", {
+        noremap = true,
+        silent = true,
+    })
 
-	vim.api.nvim_buf_set_keymap(
-		buf,
-		"n",
-		"<2-LeftMouse>",
-		"<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>",
-		{
-			noremap = true,
-			silent = true,
-		}
-	)
+    vim.api.nvim_buf_set_keymap(
+        buf,
+        "n",
+        "<2-LeftMouse>",
+        "<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>",
+        {
+            noremap = true,
+            silent = true,
+        }
+    )
 
-	vim.api.nvim_buf_set_keymap(
-		buf,
-		"i",
-		"<2-LeftMouse>",
-		"<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>",
-		{
-			noremap = true,
-			silent = true,
-		}
-	)
+    vim.api.nvim_buf_set_keymap(
+        buf,
+        "i",
+        "<2-LeftMouse>",
+        "<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>",
+        {
+            noremap = true,
+            silent = true,
+        }
+    )
 
-	vim.api.nvim_buf_set_keymap(
-		buf,
-		"v",
-		"<2-LeftMouse>",
-		"<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>",
-		{
-			noremap = true,
-			silent = true,
-		}
-	)
+    vim.api.nvim_buf_set_keymap(
+        buf,
+        "v",
+        "<2-LeftMouse>",
+        "<Cmd>lua Diagnostics_Details.diagnostics_line_callback()<CR>",
+        {
+            noremap = true,
+            silent = true,
+        }
+    )
 
-	vim.api.nvim_buf_set_keymap(buf, "n", "q", "<Cmd>quit<CR>", {
-		noremap = true,
-		silent = true,
-	})
+    vim.api.nvim_buf_set_keymap(buf, "n", "q", "<Cmd>quit<CR>", {
+        noremap = true,
+        silent = true,
+    })
 
-	vim.api.nvim_buf_set_keymap(buf, "i", "q", "<Cmd>quit<CR>", {
-		noremap = true,
-		silent = true,
-	})
+    vim.api.nvim_buf_set_keymap(buf, "i", "q", "<Cmd>quit<CR>", {
+        noremap = true,
+        silent = true,
+    })
 
-	vim.api.nvim_buf_set_keymap(buf, "v", "q", "<Cmd>quit<CR>", {
-		noremap = true,
-		silent = true,
-	})
+    vim.api.nvim_buf_set_keymap(buf, "v", "q", "<Cmd>quit<CR>", {
+        noremap = true,
+        silent = true,
+    })
 
-	vim.api.nvim_buf_set_keymap(buf, "n", "<esc>", "<Cmd>quit<CR>", {
-		noremap = true,
-		silent = true,
-	})
+    vim.api.nvim_buf_set_keymap(buf, "n", "<esc>", "<Cmd>quit<CR>", {
+        noremap = true,
+        silent = true,
+    })
 
-	vim.api.nvim_buf_set_keymap(buf, "i", "<esc>", "<Cmd>quit<CR>", {
-		noremap = true,
-		silent = true,
-	})
+    vim.api.nvim_buf_set_keymap(buf, "i", "<esc>", "<Cmd>quit<CR>", {
+        noremap = true,
+        silent = true,
+    })
 
-	vim.api.nvim_buf_set_keymap(buf, "v", "<esc>", "<Cmd>quit<CR>", {
-		noremap = true,
-		silent = true,
-	})
+    vim.api.nvim_buf_set_keymap(buf, "v", "<esc>", "<Cmd>quit<CR>", {
+        noremap = true,
+        silent = true,
+    })
 
-	for _, highlight in ipairs(highlights) do
-		vim.api.nvim_buf_add_highlight(
-			buf,
-			-1,
-			highlight.highlight,
-			highlight.line_num,
-			highlight.col_begin,
-			highlight.col_end
-		)
-	end
+    for _, highlight in ipairs(highlights) do
+        vim.api.nvim_buf_add_highlight(
+            buf,
+            -1,
+            highlight.highlight,
+            highlight.line_num,
+            highlight.col_begin,
+            highlight.col_end
+        )
+    end
 end
 
 function Diagnostics_Details.show()
-	main_win_id = vim.api.nvim_get_current_win()
+    main_win_id = vim.api.nvim_get_current_win()
 
-	local main_win_width = vim.api.nvim_win_get_width(main_win_id)
-	local main_win_current_col = vim.api.nvim_win_get_cursor(main_win_id)[2]
-	local lines, highlights, lines_count, max_line_len = get_diagnostics_lines()
+    local main_win_width = vim.api.nvim_win_get_width(main_win_id)
+    local main_win_current_col = vim.api.nvim_win_get_cursor(main_win_id)[2]
+    local lines, highlights, lines_count, max_line_len = get_diagnostics_lines()
 
-	if lines_count > 0 then
-		local buf = vim.api.nvim_create_buf(false, true)
-		set_buffer_options(buf, lines, highlights)
+    if lines_count > 0 then
+        local buf = vim.api.nvim_create_buf(false, true)
+        set_buffer_options(buf, lines, highlights)
 
-		diagnostics_details_win_id = vim.api.nvim_open_win(buf, true, {
-			relative = "cursor",
-			row = 1,
-			col = 1,
-			width = math.min(
-				math.max(math.min(math.floor(main_win_width * 0.9) - main_win_current_col, max_line_len), 100),
-				max_line_len
-			),
-			height = math.min(5, lines_count),
-			style = "minimal",
-			border = "rounded",
-		})
+        diagnostics_details_win_id = vim.api.nvim_open_win(buf, true, {
+            relative = "cursor",
+            row = 1,
+            col = 1,
+            width = math.min(
+                math.max(math.min(math.floor(main_win_width * 0.9) - main_win_current_col, max_line_len), 100),
+                max_line_len
+            ),
+            height = math.min(5, lines_count),
+            style = "minimal",
+            border = "rounded",
+        })
 
-		vim.api.nvim_set_option_value("number", false, {
-			win = diagnostics_details_win_id,
-		})
+        vim.api.nvim_set_option_value("number", false, {
+            win = diagnostics_details_win_id,
+        })
 
-		vim.api.nvim_set_option_value("spell", false, {
-			win = diagnostics_details_win_id,
-		})
+        vim.api.nvim_set_option_value("spell", false, {
+            win = diagnostics_details_win_id,
+        })
 
-		table.insert(
-			autocmds,
-			vim.api.nvim_create_autocmd("CursorMoved", {
-				callback = function()
-					if
-						diagnostics_details_win_id ~= nil
-						and vim.api.nvim_get_current_win() ~= diagnostics_details_win_id
-					then
-						vim.api.nvim_win_close(diagnostics_details_win_id, true)
-						diagnostics_details_win_id = nil
-						for _, autocmd in ipairs(autocmds) do
-							vim.api.nvim_del_autocmd(autocmd)
-						end
-						autocmds = {}
-					end
-				end,
-			})
-		)
+        table.insert(
+            autocmds,
+            vim.api.nvim_create_autocmd("CursorMoved", {
+                callback = function()
+                    if
+                        diagnostics_details_win_id ~= nil
+                        and vim.api.nvim_get_current_win() ~= diagnostics_details_win_id
+                    then
+                        vim.api.nvim_win_close(diagnostics_details_win_id, true)
+                        diagnostics_details_win_id = nil
+                        for _, autocmd in ipairs(autocmds) do
+                            vim.api.nvim_del_autocmd(autocmd)
+                        end
+                        autocmds = {}
+                    end
+                end,
+            })
+        )
 
-		table.insert(
-			autocmds,
-			vim.api.nvim_create_autocmd("WinClosed", {
-				callback = function(event)
-					if diagnostics_details_win_id ~= nil then
-						if tonumber(event.match) == diagnostics_details_win_id then
-							diagnostics_details_win_id = nil
-							for _, autocmd in ipairs(autocmds) do
-								vim.api.nvim_del_autocmd(autocmd)
-							end
-							autocmds = {}
-						end
-					end
-				end,
-			})
-		)
-	end
+        table.insert(
+            autocmds,
+            vim.api.nvim_create_autocmd("WinClosed", {
+                callback = function(event)
+                    if diagnostics_details_win_id ~= nil then
+                        if tonumber(event.match) == diagnostics_details_win_id then
+                            diagnostics_details_win_id = nil
+                            for _, autocmd in ipairs(autocmds) do
+                                vim.api.nvim_del_autocmd(autocmd)
+                            end
+                            autocmds = {}
+                        end
+                    end
+                end,
+            })
+        )
+    end
 end
 
-function Diagnostics_Details.setup() end
+function Diagnostics_Details.setup()
+    vim.api.nvim_create_user_command("DiagnosticsDetailsOpenFloat", Diagnostics_Details.show, {})
+end
 
 return Diagnostics_Details
