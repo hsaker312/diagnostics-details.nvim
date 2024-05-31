@@ -146,57 +146,67 @@ local function get_diagnostics_entries()
 					local message = information.message
 
 					if type(message) == "string" and type(location) == "table" then
-						local range = location.range
+						if type(location.uri) == "string" then
+							---@type Diagnostics_Entry
+							local child = {
+								uri = posix_path(location.uri),
+								text_objs = {},
+							}
 
-						if type(location.uri) == "string" and type(range) == "table" then
-							local first = range.start
-							local last = range["end"]
+							table.insert(entry.children, child)
 
-							if type(first) == "table" and type(last) == "table" then
-								---@type Diagnostics_Entry
-								local child = {
-									uri = posix_path(location.uri),
-									text_objs = {},
-								}
+							child.text_objs[1] = {
+								text = child.uri:match("^.+/(.+)$"),
+								hl_group = "Underlined",
+							}
 
-								table.insert(entry.children, child)
+							child.text_objs[2] = {
+								text = "",
+								hl_group = "Underlined",
+							}
 
-								child.text_objs[1] = {
-									text = child.uri:match("^.+/(.+)$")
-										.. "("
-										.. tostring(first.line + 1)
-										.. ", "
-										.. tostring(first.character + 1)
-										.. ")",
-									hl_group = "Underlined",
-								}
-
-								child.text_objs[2] = {
+							if message ~= "" then
+								child.text_objs[3] = {
 									text = ": ",
 									hl_group = "NormalFloat",
 								}
 
-								child.text_objs[3] = {
+								child.text_objs[4] = {
 									text = message,
 									hl_group = hl_group(diagnostic),
 								}
+							end
 
-								if
-									type(first.line) == "number"
-									and type(first.character) == "number"
-									and type(last.line) == "number"
-									and type(last.character) == "number"
-								then
-									child.range = {
-										first = {
-											line = first.line + 1,
-											col = first.character + 1,
-										},
-										last = {
-											line = last.line + 1,
-											col = last.character + 1,
-										},
-									}
+							local range = location.range
+
+							if type(range) == "table" then
+								local first = range.start
+								local last = range["end"]
+
+								if type(first) == "table" and type(last) == "table" then
+									if type(first.line) == "number" and type(first.character) == "number" then
+										child.text_objs[2].text = "("
+											.. tostring(first.line + 1)
+											.. ", "
+											.. tostring(first.character + 1)
+											.. ")"
+
+										child.range = {
+											first = {
+												line = first.line + 1,
+												col = first.character + 1,
+											},
+											last = {
+												line = first.line + 1,
+												col = first.character + 1,
+											},
+										}
+
+										if type(last.line) == "number" and type(last.character) == "number" then
+											child.range.last.line = last.line + 1
+											child.range.last.col = last.character + 1
+										end
+									end
 								end
 							end
 						end
@@ -226,6 +236,55 @@ end
 
 ---@type fun()[]
 local callbacks = {}
+
+---@param diagnostics_entry Diagnostics_Entry
+---@return fun()
+local function make_line_callback(diagnostics_entry)
+	return function()
+		local file = diagnostics_entry.uri:gsub("file://", "")
+
+		if file:match("^https?://[%w-_%.%?%.:/%+=&]+$") then
+			if diagnostics_details_win_id ~= nil then
+				vim.ui.open(diagnostics_entry.uri)
+				return
+			end
+		end
+
+		local file_buf = get_file_buffer(file)
+
+		if file_buf == nil then
+			vim.api.nvim_set_current_win(main_win_id)
+			vim.api.nvim_command("edit " .. file)
+		else
+			vim.api.nvim_set_current_win(main_win_id)
+			vim.api.nvim_win_set_buf(main_win_id, file_buf)
+		end
+
+		vim.schedule(function()
+			if diagnostics_entry.range ~= nil then
+				vim.api.nvim_command(
+					"call cursor("
+						.. tostring(diagnostics_entry.range.first.line)
+						.. ","
+						.. tostring(diagnostics_entry.range.first.col)
+						.. ")"
+				)
+
+				if
+					diagnostics_entry.range.last.line ~= diagnostics_entry.range.first.line
+					or (diagnostics_entry.range.last.col - diagnostics_entry.range.first.col) > 2
+				then
+					vim.api.nvim_command("normal! v")
+
+					vim.api.nvim_win_set_cursor(
+						main_win_id,
+						{ diagnostics_entry.range.last.line, diagnostics_entry.range.last.col }
+					)
+				end
+			end
+		end)
+	end
+end
 
 function Diagnostics_Details.diagnostics_line_callback()
 	local line = vim.fn.line(".")
@@ -288,72 +347,7 @@ local function get_diagnostics_lines()
 			end
 
 			append_line(line)
-			append_callback(function()
-				local file = diagnostics_entry.uri:gsub("file://", "")
-
-				if file:match("^https?://[%w-_%.%?%.:/%+=&]+$") then
-					if diagnostics_details_win_id ~= nil then
-						vim.ui.open(diagnostics_entry.uri)
-						return
-					end
-				end
-
-				local file_buf = get_file_buffer(file)
-
-				if file_buf == nil then
-					vim.api.nvim_set_current_win(main_win_id)
-					vim.api.nvim_command("edit " .. file)
-
-					if diagnostics_entry.range ~= nil then
-						vim.api.nvim_command(
-							"call cursor("
-								.. tostring(diagnostics_entry.range.first.line)
-								.. ","
-								.. tostring(diagnostics_entry.range.first.col)
-								.. ")"
-						)
-
-						if
-							diagnostics_entry.range.last.line ~= diagnostics_entry.range.first.line
-							or (diagnostics_entry.range.last.col - diagnostics_entry.range.first.col) > 2
-						then
-							vim.api.nvim_command("normal! v")
-
-							vim.api.nvim_win_set_cursor(
-								main_win_id,
-								{ diagnostics_entry.range.last.line, diagnostics_entry.range.last.col }
-							)
-						end
-					end
-				else
-					vim.api.nvim_set_current_win(main_win_id)
-					vim.api.nvim_win_set_buf(main_win_id, file_buf)
-
-					vim.defer_fn(function()
-						if diagnostics_entry.range ~= nil then
-							vim.api.nvim_command(
-								"call cursor("
-									.. tostring(diagnostics_entry.range.first.line)
-									.. ","
-									.. tostring(diagnostics_entry.range.first.col)
-									.. ")"
-							)
-
-							if
-								diagnostics_entry.range.last.line ~= diagnostics_entry.range.first.line
-								or (diagnostics_entry.range.last.col - diagnostics_entry.range.first.col) > 2
-							then
-								vim.api.nvim_command("normal! v")
-
-								vim.api.nvim_win_set_cursor(
-									main_win_id,
-									{ diagnostics_entry.range.last.line, diagnostics_entry.range.last.col }
-								)
-							end
-						end
-					end, 25)
-				end
-			end)
+			append_callback(make_line_callback(diagnostics_entry))
 
 			if diagnostics_entry.children ~= nil then
 				make_lines(diagnostics_entry.children, current_tab .. tab)
