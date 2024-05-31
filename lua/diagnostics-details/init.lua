@@ -133,7 +133,7 @@ local function get_diagnostics_entries()
 
         local user_data = diagnostic.user_data
 
-        if user_data.lsp ~= nil then
+        if user_data ~= nil and user_data.lsp ~= nil then
             local lsp = user_data.lsp
 
             if type(lsp.code) == "string" and lsp.codeDescription ~= nil then
