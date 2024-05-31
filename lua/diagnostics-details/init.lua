@@ -314,12 +314,10 @@ function Diagnostics_Details.diagnostics_line_callback()
     end
 end
 
----@param input_string string
+---@param str string
 ---@return string
-local function format_buffer_line(input_string)
-    local trimmed_string = input_string:match("^%s*(.-)%s*$")
-
-    local res = trimmed_string:gsub("%s+", " ")
+local function format_buffer_line(str)
+    local res = str:gsub("\t", " "):gsub("%s+", " ")
 
     return res
 end
