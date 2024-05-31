@@ -390,7 +390,7 @@ local function get_diagnostics_lines()
                             text_index < (text_lines_count - 1)
                             or (
                                 text_index == (text_lines_count - 1)
-                                and diagnostics_entry.text_objs[text_obj_index + 1] ~= nil
+                                and diagnostics_entry.text_objs[text_obj_index + 1] == nil
                             )
                         then
                             append_line(line)
