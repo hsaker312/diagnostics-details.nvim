@@ -370,7 +370,7 @@ local function get_diagnostics_lines()
                     local text_lines = {}
                     local text_lines_count = 0
 
-                    for text_line in text_lines do
+                    for text_line in text_obj.text:gmatch("([^\n]*)\n?") do
                         table.insert(text_lines, text_line)
                         text_lines_count = text_lines_count + 1
                     end
