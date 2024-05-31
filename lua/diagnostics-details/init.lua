@@ -34,6 +34,17 @@ local diagnostics_details_win_id = nil
 ---@type integer[]
 local autocmds = {}
 
+---@param path string
+---@return string
+local function posix_path(path)
+	if type(path) == "string" then
+		local res = path:gsub("\\", "/")
+		return res
+	end
+
+	return ""
+end
+
 ---@return Diagnostics_Entry[]
 local function get_diagnostics_entries()
 	---@param diagnostic vim.Diagnostic
@@ -61,7 +72,7 @@ local function get_diagnostics_entries()
 	for _, diagnostic in ipairs(diagnostics) do
 		---@type Diagnostics_Entry
 		local entry = {
-			uri = vim.api.nvim_buf_get_name(0),
+			uri = posix_path(vim.api.nvim_buf_get_name(0)),
 			text_objs = {},
 			children = {},
 		}
@@ -105,8 +116,8 @@ local function get_diagnostics_entries()
 		if user_data.lsp ~= nil then
 			local lsp = user_data.lsp
 
-			if lsp.code ~= nil and lsp.codeDescription ~= nil then
-				if type(lsp.code) == "string" and type(lsp.codeDescription.href) == "string" then
+			if type(lsp.code) == "string" and lsp.codeDescription ~= nil then
+				if type(lsp.codeDescription.href) == "string" then
 					---@type Diagnostics_Entry
 					local child = {
 						uri = lsp.codeDescription.href,
@@ -136,28 +147,29 @@ local function get_diagnostics_entries()
 
 					if type(message) == "string" and type(location) == "table" then
 						local range = location.range
-						local uri = location.uri
 
-						if type(uri) == "string" and type(range) == "table" then
+						if type(location.uri) == "string" and type(range) == "table" then
 							local first = range.start
 							local last = range["end"]
 
 							if type(first) == "table" and type(last) == "table" then
 								---@type Diagnostics_Entry
 								local child = {
-									uri = uri,
+									uri = posix_path(location.uri),
 									text_objs = {},
 								}
 
 								table.insert(entry.children, child)
 
-								child.text_objs[1] =
-									{
-										text = uri:gsub("\\", "/"):match("^.+/(.+)$") .. "(" .. tostring(
-											first.line + 1
-										) .. ", " .. tostring(first.character + 1) .. ")",
-										hl_group = "Underlined",
-									}
+								child.text_objs[1] = {
+									text = child.uri:match("^.+/(.+)$")
+										.. "("
+										.. tostring(first.line + 1)
+										.. ", "
+										.. tostring(first.character + 1)
+										.. ")",
+									hl_group = "Underlined",
+								}
 
 								child.text_objs[2] = {
 									text = ": ",
@@ -195,6 +207,21 @@ local function get_diagnostics_entries()
 	end
 
 	return entries
+end
+
+---comment
+---@param file string
+---@return integer?
+local function get_file_buffer(file)
+	local buffers = vim.api.nvim_list_bufs() -- Get a list of all buffer numbers
+
+	for _, buf in ipairs(buffers) do
+		if vim.api.nvim_buf_is_loaded(buf) and vim.api.nvim_buf_get_name(buf) ~= "" then
+			if vim.api.nvim_buf_get_name(buf) == file then
+				return buf
+			end
+		end
+	end
 end
 
 ---@type fun()[]
@@ -266,37 +293,65 @@ local function get_diagnostics_lines()
 
 				if file:match("^https?://[%w-_%.%?%.:/%+=&]+$") then
 					if diagnostics_details_win_id ~= nil then
-						vim.api.nvim_win_set_cursor(diagnostics_details_win_id, { lines_count, #line - (#file + 1) })
-						vim.defer_fn(function()
-							vim.api.nvim_feedkeys("gx", "", true)
-						end, 20)
+						vim.ui.open(diagnostics_entry.uri)
 						return
 					end
 				end
 
-				vim.api.nvim_set_current_win(main_win_id)
-				vim.api.nvim_command("edit " .. file)
+				local file_buf = get_file_buffer(file)
 
-				if diagnostics_entry.range ~= nil then
-					vim.api.nvim_command(
-						"call cursor("
-							.. tostring(diagnostics_entry.range.first.line)
-							.. ","
-							.. tostring(diagnostics_entry.range.first.col)
-							.. ")"
-					)
+				if file_buf == nil then
+					vim.api.nvim_set_current_win(main_win_id)
+					vim.api.nvim_command("edit " .. file)
 
-					if
-						diagnostics_entry.range.last.line ~= diagnostics_entry.range.first.line
-						or (diagnostics_entry.range.last.col - diagnostics_entry.range.first.col) > 2
-					then
-						vim.api.nvim_command("normal! v")
-
-						vim.api.nvim_win_set_cursor(
-							main_win_id,
-							{ diagnostics_entry.range.last.line, diagnostics_entry.range.last.col }
+					if diagnostics_entry.range ~= nil then
+						vim.api.nvim_command(
+							"call cursor("
+								.. tostring(diagnostics_entry.range.first.line)
+								.. ","
+								.. tostring(diagnostics_entry.range.first.col)
+								.. ")"
 						)
+
+						if
+							diagnostics_entry.range.last.line ~= diagnostics_entry.range.first.line
+							or (diagnostics_entry.range.last.col - diagnostics_entry.range.first.col) > 2
+						then
+							vim.api.nvim_command("normal! v")
+
+							vim.api.nvim_win_set_cursor(
+								main_win_id,
+								{ diagnostics_entry.range.last.line, diagnostics_entry.range.last.col }
+							)
+						end
 					end
+				else
+					vim.api.nvim_set_current_win(main_win_id)
+					vim.api.nvim_win_set_buf(main_win_id, file_buf)
+
+					vim.defer_fn(function()
+						if diagnostics_entry.range ~= nil then
+							vim.api.nvim_command(
+								"call cursor("
+									.. tostring(diagnostics_entry.range.first.line)
+									.. ","
+									.. tostring(diagnostics_entry.range.first.col)
+									.. ")"
+							)
+
+							if
+								diagnostics_entry.range.last.line ~= diagnostics_entry.range.first.line
+								or (diagnostics_entry.range.last.col - diagnostics_entry.range.first.col) > 2
+							then
+								vim.api.nvim_command("normal! v")
+
+								vim.api.nvim_win_set_cursor(
+									main_win_id,
+									{ diagnostics_entry.range.last.line, diagnostics_entry.range.last.col }
+								)
+							end
+						end
+					end, 25)
 				end
 			end)
 
@@ -430,7 +485,10 @@ function Diagnostics_Details.show()
 			relative = "cursor",
 			row = 1,
 			col = 1,
-			width = math.min(math.max(math.min(math.floor(main_win_width * 0.9) - main_win_current_col, max_line_len), 100), max_line_len),
+			width = math.min(
+				math.max(math.min(math.floor(main_win_width * 0.9) - main_win_current_col, max_line_len), 100),
+				max_line_len
+			),
 			height = math.min(5, lines_count),
 			style = "minimal",
 			border = "rounded",
