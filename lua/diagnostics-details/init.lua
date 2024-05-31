@@ -314,6 +314,16 @@ function Diagnostics_Details.diagnostics_line_callback()
     end
 end
 
+---@param input_string string
+---@return string
+local function format_buffer_line(input_string)
+    local trimmed_string = input_string:match("^%s*(.-)%s*$")
+
+    local res = trimmed_string:gsub("%s+", " ")
+
+    return res
+end
+
 ---@return string[]
 ---@return Diagnostics_Highlight[]
 ---@return integer
@@ -333,7 +343,7 @@ local function get_diagnostics_lines()
 
     ---@param line string
     local function append_line(line)
-        table.insert(lines, line)
+        table.insert(lines, format_buffer_line(line))
         lines_count = lines_count + 1
         max_line_len = math.max(max_line_len, #lines[lines_count])
     end
