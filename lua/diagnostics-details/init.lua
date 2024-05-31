@@ -430,7 +430,7 @@ function Diagnostics_Details.show()
 			relative = "cursor",
 			row = 1,
 			col = 1,
-			width = math.min(math.max(math.min(math.floor(main_win_width * 0.9) - main_win_current_col, max_line_len), 100), main_win_current_col),
+			width = math.min(math.max(math.min(math.floor(main_win_width * 0.9) - main_win_current_col, max_line_len), 100), max_line_len),
 			height = math.min(5, lines_count),
 			style = "minimal",
 			border = "rounded",
