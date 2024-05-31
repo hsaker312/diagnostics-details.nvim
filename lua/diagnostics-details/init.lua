@@ -354,7 +354,7 @@ local function get_diagnostics_lines()
         for _, diagnostics_entry in ipairs(diagnostics_entries) do
             local line = current_tab
 
-            for _, text_obj in ipairs(diagnostics_entry.text_objs) do
+            for text_obj_index, text_obj in ipairs(diagnostics_entry.text_objs) do
                 if text_obj.text:match("\n") == nil then
                     local line_len = #line
                     line = line .. text_obj.text
@@ -386,11 +386,17 @@ local function get_diagnostics_lines()
                             col_end = #line,
                         })
 
-                        if text_index < text_lines_count then
+                        if
+                            text_index < (text_lines_count - 1)
+                            or (
+                                text_index == (text_lines_count - 1)
+                                and diagnostics_entry.text_objs[text_obj_index + 1] ~= nil
+                            )
+                        then
                             append_line(line)
                             append_callback(make_line_callback(diagnostics_entry))
 
-                            line = current_tab .. tab
+                            line = current_tab:gsub(" ", ".") .. tab:gsub(" ", ".")
                         end
                     end
                 end
