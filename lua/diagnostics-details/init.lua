@@ -263,7 +263,7 @@ local function make_line_callback(diagnostics_entry)
     return function()
         local file = diagnostics_entry.uri:gsub("file://", "")
 
-        if file:match("^https?://[%w-_%.%?%.:/%+=&]+$") then
+        if file:match("^https?://[%w-_%.%?%.:/%+=&@#]+$") then
             if diagnostics_details_win_id ~= nil then
                 vim.ui.open(diagnostics_entry.uri)
                 return
@@ -317,7 +317,10 @@ end
 ---@param str string
 ---@return string
 local function format_buffer_line(str)
-    local res = str:gsub("\t", " "):gsub("%s+", " ")
+    local res = str
+        :gsub("\t", " ") --tab
+        :gsub(string.char(194) .. string.char(160), " ") --U+C2A0
+        :gsub("%s+", " ") --multi-space
 
     return res
 end
