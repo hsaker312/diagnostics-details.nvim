@@ -343,7 +343,7 @@ local function get_diagnostics_lines()
 
     ---@param line string
     local function append_line(line)
-        table.insert(lines, format_buffer_line(line))
+        table.insert(lines, line)
         lines_count = lines_count + 1
         max_line_len = math.max(max_line_len, #lines[lines_count])
     end
@@ -367,7 +367,7 @@ local function get_diagnostics_lines()
             for text_obj_index, text_obj in ipairs(diagnostics_entry.text_objs) do
                 if text_obj.text:match("\n") == nil then
                     local line_len = #line
-                    line = line .. text_obj.text
+                    line = line .. format_buffer_line(text_obj.text)
 
                     append_highlight({
                         highlight = text_obj.hl_group,
@@ -387,7 +387,7 @@ local function get_diagnostics_lines()
 
                     for text_index, text_line in ipairs(text_lines) do
                         local line_len = #line
-                        line = line .. text_line
+                        line = line .. format_buffer_line(text_line)
 
                         append_highlight({
                             highlight = text_obj.hl_group,
