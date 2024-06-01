@@ -93,11 +93,11 @@ function Diagnostics_Parser.get_diagnostics_entries()
         entry.range = {
             first = {
                 line = diagnostic.lnum + 1,
-                col = diagnostic.col,
+                col = diagnostic.col + 1,
             },
             last = {
                 line = diagnostic.end_lnum + 1,
-                col = diagnostic.end_col,
+                col = diagnostic.end_col - 1,
             },
         }
 
@@ -184,11 +184,11 @@ function Diagnostics_Parser.get_diagnostics_entries()
                                         child.range = {
                                             first = {
                                                 line = first.line + 1,
-                                                col = first.character + 1,
+                                                col = first.character,
                                             },
                                             last = {
                                                 line = first.line + 1,
-                                                col = first.character + 1,
+                                                col = first.character,
                                             },
                                         }
 
