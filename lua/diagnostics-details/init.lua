@@ -31,14 +31,14 @@ Vim = require("diagnostics-details.vim")
 Diagnostics_Details.show = Vim.show
 
 ---Toggle auto close diagnostics window when focus is lost
-function Diagnostics_Details.toggle_persiste()
+function Diagnostics_Details.toggle_persist()
     Config.auto_close_on_focus_lost = not Config.auto_close_on_focus_lost
 end
 
 ---@param opts Setup_Opts?
 function Diagnostics_Details.setup(opts)
     vim.api.nvim_create_user_command("DiagnosticsDetailsOpenFloat", Diagnostics_Details.show, {})
-    vim.api.nvim_create_user_command("DiagnosticsDetailsTogglePersiste", Diagnostics_Details.toggle_persiste, {})
+    vim.api.nvim_create_user_command("DiagnosticsDetailsTogglePersist", Diagnostics_Details.toggle_persist, {})
 
     if type(opts) == "table" then
         Utils.process_opts(opts)
