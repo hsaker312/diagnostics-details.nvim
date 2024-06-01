@@ -22,16 +22,21 @@
 ---@class Diagnostics_Details
 Diagnostics_Details = {}
 
+---@type Utils
+Utils = require("diagnostics-details.utils")
+
 ---@type Vim
 Vim = require("diagnostics-details.vim")
 
 Diagnostics_Details.show = Vim.show
 
----@param opts Setup_Opts
+---@param opts Setup_Opts?
 function Diagnostics_Details.setup(opts)
     vim.api.nvim_create_user_command("DiagnosticsDetailsOpenFloat", Diagnostics_Details.show, {})
 
-    Utils.process_opts(opts)
+    if type(opts) == "table" then
+        Utils.process_opts(opts)
+    end
 end
 
 return Diagnostics_Details
