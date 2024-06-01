@@ -1,6 +1,9 @@
 ---@class Vim
 Vim = {}
 
+---@type Config
+Config = require("diagnostics-details.config")
+
 ---@type Utils
 Utils = require("diagnostics-details.utils")
 
@@ -12,6 +15,9 @@ Diagnostics_Parser = require("diagnostics-details.diagnostics-parser")
 
 ---@type integer
 local main_win_id = 0
+
+---@type integer?
+local diagnostics_details_buf = nil
 
 ---@type integer?
 local diagnostics_details_win_id = nil
@@ -76,51 +82,44 @@ local function make_line_callback(diagnostics_entry)
     end
 end
 
----@param buf integer
 ---@param lines string[]
 ---@param highlights Diagnostics_Highlight[]
-local function set_buffer_options(buf, lines, highlights)
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+local function set_buffer_options(lines, highlights)
+    if diagnostics_details_buf == nil then
+        return
+    end
+
+    vim.api.nvim_buf_set_lines(diagnostics_details_buf, 0, -1, false, lines)
 
     vim.api.nvim_set_option_value("modifiable", false, {
-        buf = buf,
+        buf = diagnostics_details_buf,
     })
 
     vim.api.nvim_set_option_value("buftype", "nofile", {
-        buf = buf,
+        buf = diagnostics_details_buf,
     })
 
-    Utils.set_buffer_keymap(
-        buf,
-        "<CR>",
-        "<Cmd>lua require('diagnostics-details.vim').diagnostics_line_callback()<CR>",
-        {
+
+    for _, key in ipairs(Config.open_key) do
+        Utils.set_buffer_keymap(
+            diagnostics_details_buf,
+            key,
+            "<Cmd>lua require('diagnostics-details.vim').diagnostics_line_callback()<CR>",
+            {
+                noremap = true,
+                silent = true,
+            }
+        )
+    end
+
+    for _, key in ipairs(Config.quit_key) do
+        Utils.set_buffer_keymap(diagnostics_details_buf, key, "<Cmd>quit<CR>", {
             noremap = true,
             silent = true,
-        }
-    )
+        })
+    end
 
-    Utils.set_buffer_keymap(
-        buf,
-        "<2-LeftMouse>",
-        "<Cmd>lua require('diagnostics-details.vim').diagnostics_line_callback()<CR>",
-        {
-            noremap = true,
-            silent = true,
-        }
-    )
-
-    Utils.set_buffer_keymap(buf, "q", "<Cmd>quit<CR>", {
-        noremap = true,
-        silent = true,
-    })
-
-    Utils.set_buffer_keymap(buf, "<esc>", "<Cmd>quit<CR>", {
-        noremap = true,
-        silent = true,
-    })
-
-    Utils.set_buffer_highlights(buf, highlights)
+    Utils.set_buffer_highlights(diagnostics_details_buf, highlights)
 end
 
 local function set_diagnostics_window_options()
@@ -135,6 +134,7 @@ end
 
 local function diagnostics_window_close_handler()
     diagnostics_details_win_id = nil
+    diagnostics_details_buf = nil
 
     for _, autocmd in ipairs(autocmds) do
         vim.api.nvim_del_autocmd(autocmd)
@@ -144,20 +144,39 @@ local function diagnostics_window_close_handler()
 end
 
 local function initialize_autocmds()
-    table.insert(
-        autocmds,
-        vim.api.nvim_create_autocmd("CursorMoved", {
-            callback = function()
-                if
-                    diagnostics_details_win_id ~= nil
-                    and vim.api.nvim_get_current_win() ~= diagnostics_details_win_id
-                then
-                    vim.api.nvim_win_close(diagnostics_details_win_id, true)
-                    diagnostics_window_close_handler()
-                end
-            end,
-        })
-    )
+    if Config.auto_close_on_focus_lost then
+        table.insert(
+            autocmds,
+            vim.api.nvim_create_autocmd("CursorMoved", {
+                callback = function()
+                    if
+                        diagnostics_details_win_id ~= nil
+                        and vim.api.nvim_get_current_win() ~= diagnostics_details_win_id
+                    then
+                        vim.api.nvim_win_close(diagnostics_details_win_id, true)
+                        diagnostics_window_close_handler()
+                    end
+                end,
+            })
+        )
+    else
+        table.insert(
+            autocmds,
+            vim.api.nvim_create_autocmd("BufWinEnter", {
+                callback = function()
+                    if diagnostics_details_win_id ~= nil and diagnostics_details_buf ~= nil then
+                        if vim.api.nvim_win_get_buf(diagnostics_details_win_id) ~= diagnostics_details_buf then
+                            vim.schedule(function()
+                                if diagnostics_details_win_id ~= nil and diagnostics_details_buf ~= nil then
+                                    vim.api.nvim_win_set_buf(diagnostics_details_win_id, diagnostics_details_buf)
+                                end
+                            end)
+                        end
+                    end
+                end,
+            })
+        )
+    end
 
     table.insert(
         autocmds,
@@ -183,10 +202,10 @@ function Vim.show()
     local diagnostics_window_dimension = Utils.diagnostics_window_dimension(main_win_id, max_line_len, lines_count)
 
     if lines_count > 0 then
-        local buf = vim.api.nvim_create_buf(false, true)
-        set_buffer_options(buf, lines, highlights)
+        diagnostics_details_buf = vim.api.nvim_create_buf(false, true)
+        set_buffer_options(lines, highlights)
 
-        diagnostics_details_win_id = vim.api.nvim_open_win(buf, true, {
+        diagnostics_details_win_id = vim.api.nvim_open_win(diagnostics_details_buf, true, {
             relative = "cursor",
             row = 1,
             col = 1,

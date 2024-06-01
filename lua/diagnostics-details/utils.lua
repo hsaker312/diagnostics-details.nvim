@@ -1,6 +1,9 @@
 ---@class Utils
 Utils = {}
 
+---@type Config
+Config = require("diagnostics-details.config")
+
 ---@param path string?
 ---@return string
 function Utils.posix_path(path)
@@ -95,16 +98,139 @@ function Utils.diagnostics_window_dimension(main_win_id, max_line_len, lines_cou
     ---@field height integer
     local res = {
         width = math.min(
-            math.max(math.min(math.floor(main_win_width * 0.9) - main_win_current_col, max_line_len), 100),
+            math.max(
+                math.min(
+                    math.floor(main_win_width * Config.max_window_width_percentage) - main_win_current_col,
+                    max_line_len
+                ),
+                Config.max_window_width_fallback
+            ),
             max_line_len
         ),
         height = math.min(
-            math.max(math.min(math.floor(main_win_height * 0.65) - main_win_current_line, lines_count), 5),
+            math.max(
+                math.min(
+                    math.floor(main_win_height * Config.max_window_height_percentage) - main_win_current_line,
+                    lines_count
+                ),
+                Config.max_window_height_fallback
+            ),
             lines_count
         ),
     }
 
     return res
+end
+
+---@param opts Setup_Opts
+function Utils.process_opts(opts)
+    if type(opts.diagnostics_error_highlight_group) == "string" then
+        Config.diagnostic_severity_highlight_group[1] = opts.diagnostics_error_highlight_group
+    end
+
+    if type(opts.diagnostics_warn_highlight_group) == "string" then
+        Config.diagnostic_severity_highlight_group[2] = opts.diagnostics_warn_highlight_group
+    end
+
+    if type(opts.diagnostics_info_highlight_group) == "string" then
+        Config.diagnostic_severity_highlight_group[3] = opts.diagnostics_info_highlight_group
+    end
+
+    if type(opts.diagnostics_hint_highlight_group) == "string" then
+        Config.diagnostic_severity_highlight_group[4] = opts.diagnostics_hint_highlight_group
+    end
+
+    if type(opts.default_text_highlight_group) == "string" then
+        Config.default_text_highlight_group = opts.default_text_highlight_group
+        Config.diagnostics_source_highlight_group = Config.default_text_highlight_group
+        Config.diagnostics_code_highlight_group = Config.default_text_highlight_group
+    end
+
+    if type(opts.diagnostics_source_highlight_group) == "string" then
+        Config.diagnostics_source_highlight_group = opts.diagnostics_source_highlight_group
+    end
+
+    if type(opts.diagnostics_code_highlight_group) == "string" then
+        Config.diagnostics_code_highlight_group = opts.diagnostics_code_highlight_group
+    end
+
+    if type(opts.diagnostics_url_code_highlight_group) == "string" then
+        Config.diagnostics_url_code_highlight_group = opts.diagnostics_url_code_highlight_group
+    end
+
+    if type(opts.diagnostics_url_highlight_group) == "string" then
+        Config.diagnostics_url_highlight_group = opts.diagnostics_url_highlight_group
+    end
+
+    if type(opts.diagnostics_source_file_highlight_group) == "string" then
+        Config.diagnostics_source_file_highlight_group = opts.diagnostics_source_file_highlight_group
+    end
+
+    if type(opts.unknown_diagnostics_source) == "string" then
+        Config.unknown_diagnostics_source = opts.unknown_diagnostics_source
+    end
+
+    if type(opts.unknown_diagnostics_source_highlight_group) == "string" then
+        Config.unknown_diagnostics_source_highlight_group = opts.unknown_diagnostics_source_highlight_group
+    end
+
+    if type(opts.max_window_width_fallback) == "number" then
+        Config.max_window_width_fallback = math.floor(opts.max_window_width_fallback)
+    end
+
+    if type(opts.max_window_height_fallback) == "number" then
+        Config.max_window_height_fallback = math.floor(opts.max_window_height_fallback)
+    end
+
+    if type(opts.max_window_width_percentage) == "number" then
+        if opts.max_window_width_percentage > 0 and opts.max_window_width_percentage <= 1 then
+            Config.max_window_width_percentage = opts.max_window_width_percentage
+        end
+    end
+
+    if type(opts.max_window_height_percentage) == "number" then
+        if opts.max_window_height_percentage > 0 and opts.max_window_height_percentage <= 1 then
+            Config.max_window_height_percentage = opts.max_window_height_percentage
+        end
+    end
+
+    if type(opts.auto_close_on_focus_lost) == "boolean" then
+        Config.auto_close_on_focus_lost = opts.auto_close_on_focus_lost
+    end
+
+    if type(opts.open_key) == "string" then
+        Config.open_key = { opts.open_key }
+    elseif type(opts.open_key) == "table" then
+        for _, key in ipairs(opts.open_key) do
+            local valid = true
+
+            if type(key) ~= "string" then
+                valid = false
+                break
+            end
+
+            if valid then
+                Config.open_key = opts.open_key
+            end
+        end
+    end
+
+    if type(opts.quit_key) == "string" then
+        Config.quit_key = { opts.quit_key }
+    elseif type(opts.quit_key) == "table" then
+        for _, key in ipairs(opts.quit_key) do
+            local valid = true
+
+            if type(key) ~= "string" then
+                valid = false
+                break
+            end
+
+            if valid then
+                Config.quit_key = opts.quit_key
+            end
+        end
+    end
 end
 
 return Utils

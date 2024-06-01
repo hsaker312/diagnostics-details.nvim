@@ -41,7 +41,7 @@ function Diagnostics_Parser.get_diagnostics_entries()
             return Config.diagnostic_severity_highlight_group[diagnostic.severity]
         end
 
-        return "NormalFloat"
+        return Config.default_text_highlight_group
     end
 
     ---@type Diagnostics_Entry[]
@@ -67,12 +67,12 @@ function Diagnostics_Parser.get_diagnostics_entries()
         if source ~= "" then
             entry.text_objs[1] = {
                 text = Utils.format_entry_str(source) .. ": ",
-                hl_group = "NormalFloat",
+                hl_group = Config.diagnostics_source_highlight_group,
             }
         else
             entry.text_objs[1] = {
-                text = "Vim-Diagnostics" .. ": ",
-                hl_group = "Comment",
+                text = Config.unknown_diagnostics_source .. ": ",
+                hl_group = Config.unknown_diagnostics_source_highlight_group,
             }
         end
 
@@ -86,7 +86,7 @@ function Diagnostics_Parser.get_diagnostics_entries()
         if code_str ~= "" then
             entry.text_objs[3] = {
                 text = " [" .. code_str .. "]",
-                hl_group = "NormalFloat",
+                hl_group = Config.diagnostics_code_highlight_group,
             }
         end
 
@@ -118,12 +118,12 @@ function Diagnostics_Parser.get_diagnostics_entries()
 
                     child.text_objs[1] = {
                         text = Utils.format_entry_str(lsp.code),
-                        hl_group = hl_group(diagnostic),
+                        hl_group = Config.diagnostics_url_code_highlight_group or hl_group(diagnostic),
                     }
 
                     child.text_objs[2] = {
                         text = " (" .. Utils.format_entry_str(lsp.codeDescription.href) .. ")",
-                        hl_group = "Comment",
+                        hl_group = Config.diagnostics_url_highlight_group,
                     }
                 end
             end
@@ -147,18 +147,18 @@ function Diagnostics_Parser.get_diagnostics_entries()
 
                             child.text_objs[1] = {
                                 text = Utils.format_entry_str(child.uri:match("^.+/(.+)$")),
-                                hl_group = "Underlined",
+                                hl_group = Config.diagnostics_source_file_highlight_group,
                             }
 
                             child.text_objs[2] = {
                                 text = "",
-                                hl_group = "Underlined",
+                                hl_group = Config.diagnostics_source_file_highlight_group,
                             }
 
                             if message ~= "" then
                                 child.text_objs[3] = {
                                     text = ": ",
-                                    hl_group = "NormalFloat",
+                                    hl_group = Config.default_text_highlight_group,
                                 }
 
                                 child.text_objs[4] = {
