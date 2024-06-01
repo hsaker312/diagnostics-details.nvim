@@ -16,6 +16,12 @@ function Utils.posix_path(path)
     return ""
 end
 
+function Utils.decode_uri(str)
+    return str:gsub("%%(%x%x)", function(hex)
+        return string.char(tonumber(hex, 16))
+    end)
+end
+
 ---@param value any
 ---@return string
 function Utils.format_entry_str(value)

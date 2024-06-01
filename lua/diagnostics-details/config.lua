@@ -28,10 +28,10 @@ Config.max_window_height_percentage = 0.65
 
 Config.auto_close_on_focus_lost = true
 
----@type string[]
+---@type table<integer,string>
 Config.open_key = {"<CR>", "<2-LeftMouse>"}
 
----@type string[]
+---@type table<integer,string>
 Config.quit_key = {"q", "<esc>"}
 
 return Config

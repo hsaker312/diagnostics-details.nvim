@@ -45,6 +45,8 @@ local function make_line_callback(diagnostics_entry)
         if file:match("^https?://[%w-_%.%?%.:/%+=&@#]+$") then
             vim.ui.open(diagnostics_entry.uri)
         else
+            file = Utils.decode_uri(file)
+
             local file_buf = Utils.get_file_buffer(file)
 
             if file_buf == nil then
