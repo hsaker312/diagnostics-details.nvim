@@ -194,6 +194,7 @@ local function initialize_autocmds()
     )
 end
 
+---Show diagnostics details window
 function Vim.show()
     main_win_id = vim.api.nvim_get_current_win()
 
