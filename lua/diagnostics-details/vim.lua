@@ -69,7 +69,7 @@ local function make_line_callback(diagnostics_entry)
 
                     if
                         diagnostics_entry.range.last.line ~= diagnostics_entry.range.first.line
-                        or (diagnostics_entry.range.last.col - diagnostics_entry.range.first.col) > 2
+                        or (diagnostics_entry.range.last.col - diagnostics_entry.range.first.col) > 1
                     then
                         vim.api.nvim_command("normal! v")
 
