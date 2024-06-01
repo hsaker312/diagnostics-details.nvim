@@ -75,7 +75,7 @@ local function make_line_callback(diagnostics_entry)
 
                         vim.api.nvim_win_set_cursor(
                             main_win_id,
-                            { diagnostics_entry.range.last.line, diagnostics_entry.range.last.col }
+                            { diagnostics_entry.range.last.line, diagnostics_entry.range.last.col - 1 }
                         )
                     end
                 end
