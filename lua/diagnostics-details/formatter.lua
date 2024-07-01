@@ -2,7 +2,7 @@
 Formatter = {}
 
 ---@type Utils
-Utils = require("diagnostics-details.utils")
+local utils = require("diagnostics-details.utils")
 
 ---@param diagnostics_entries Diagnostics_Entry[]
 ---@param callback_maker fun(Diagnostics_Entry):fun()
@@ -51,7 +51,7 @@ function Formatter.get_diagnostics_lines(diagnostics_entries, callback_maker)
             for text_obj_index, text_obj in ipairs(diagnostics_entry.text_objs) do
                 if text_obj.text:match("\n") == nil then
                     local line_len = #line
-                    line = line .. Utils.format_diagnostics_str(text_obj.text)
+                    line = line .. utils.format_diagnostics_str(text_obj.text)
 
                     append_highlight({
                         highlight = text_obj.hl_group,
@@ -71,7 +71,7 @@ function Formatter.get_diagnostics_lines(diagnostics_entries, callback_maker)
 
                     for text_index, text_line in ipairs(text_lines) do
                         local line_len = #line
-                        line = line .. Utils.format_diagnostics_str(text_line)
+                        line = line .. utils.format_diagnostics_str(text_line)
 
                         append_highlight({
                             highlight = text_obj.hl_group,

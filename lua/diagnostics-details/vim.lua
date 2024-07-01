@@ -2,16 +2,16 @@
 Vim = {}
 
 ---@type Config
-Config = require("diagnostics-details.config")
+local config = require("diagnostics-details.config")
 
 ---@type Utils
-Utils = require("diagnostics-details.utils")
+local utils = require("diagnostics-details.utils")
 
 ---@type Formatter
-Formatter = require("diagnostics-details.formatter")
+local formatter = require("diagnostics-details.formatter")
 
 ---@type Diagnostics_Parser
-Diagnostics_Parser = require("diagnostics-details.diagnostics-parser")
+local diagnostics_parser = require("diagnostics-details.diagnostics-parser")
 
 ---@type integer
 local main_win_id = 0
@@ -45,9 +45,9 @@ local function make_line_callback(diagnostics_entry)
         if file:match("^https?://[%w-_%.%?%.:/%+=&@#]+$") then
             vim.ui.open(diagnostics_entry.uri)
         else
-            file = Utils.decode_uri(file)
+            file = utils.decode_uri(file)
 
-            local file_buf = Utils.get_file_buffer(file)
+            local file_buf = utils.get_file_buffer(file)
 
             if file_buf == nil then
                 vim.api.nvim_set_current_win(main_win_id)
@@ -102,8 +102,8 @@ local function set_buffer_options(lines, highlights)
     })
 
 
-    for _, key in ipairs(Config.open_key) do
-        Utils.set_buffer_keymap(
+    for _, key in ipairs(config.open_key) do
+        utils.set_buffer_keymap(
             diagnostics_details_buf,
             key,
             "<Cmd>lua require('diagnostics-details.vim').diagnostics_line_callback()<CR>",
@@ -114,14 +114,14 @@ local function set_buffer_options(lines, highlights)
         )
     end
 
-    for _, key in ipairs(Config.quit_key) do
-        Utils.set_buffer_keymap(diagnostics_details_buf, key, "<Cmd>quit<CR>", {
+    for _, key in ipairs(config.quit_key) do
+        utils.set_buffer_keymap(diagnostics_details_buf, key, "<Cmd>quit<CR>", {
             noremap = true,
             silent = true,
         })
     end
 
-    Utils.set_buffer_highlights(diagnostics_details_buf, highlights)
+    utils.set_buffer_highlights(diagnostics_details_buf, highlights)
 end
 
 local function set_diagnostics_window_options()
@@ -146,7 +146,7 @@ local function diagnostics_window_close_handler()
 end
 
 local function initialize_autocmds()
-    if Config.auto_close_on_focus_lost then
+    if config.auto_close_on_focus_lost then
         table.insert(
             autocmds,
             vim.api.nvim_create_autocmd("CursorMoved", {
@@ -199,10 +199,10 @@ function Vim.show()
     main_win_id = vim.api.nvim_get_current_win()
 
     local lines, highlights, callbacks_res, lines_count, max_line_len =
-        Formatter.get_diagnostics_lines(Diagnostics_Parser.get_diagnostics_entries(), make_line_callback)
+        formatter.get_diagnostics_lines(diagnostics_parser.get_diagnostics_entries(), make_line_callback)
     callbacks = callbacks_res
 
-    local diagnostics_window_dimension = Utils.diagnostics_window_dimension(main_win_id, max_line_len, lines_count)
+    local diagnostics_window_dimension = utils.diagnostics_window_dimension(main_win_id, max_line_len, lines_count)
 
     if lines_count > 0 then
         diagnostics_details_buf = vim.api.nvim_create_buf(false, true)

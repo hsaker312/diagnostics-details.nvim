@@ -2,10 +2,10 @@
 Diagnostics_Parser = {}
 
 ---@type Utils
-Utils = require("diagnostics-details.utils")
+local utils = require("diagnostics-details.utils")
 
 ---@type Config
-Config = require("diagnostics-details.config")
+local config = require("diagnostics-details.config")
 
 ---@class Diagnostics_Highlight
 ---@field highlight string
@@ -38,10 +38,10 @@ function Diagnostics_Parser.get_diagnostics_entries()
     ---@return string
     local function hl_group(diagnostic)
         if diagnostic.severity ~= nil then
-            return Config.diagnostic_severity_highlight_group[diagnostic.severity]
+            return config.diagnostic_severity_highlight_group[diagnostic.severity]
         end
 
-        return Config.default_text_highlight_group
+        return config.default_text_highlight_group
     end
 
     ---@type Diagnostics_Entry[]
@@ -51,7 +51,7 @@ function Diagnostics_Parser.get_diagnostics_entries()
     for _, diagnostic in ipairs(diagnostics) do
         ---@type Diagnostics_Entry
         local entry = {
-            uri = Utils.posix_path(vim.api.nvim_buf_get_name(0)),
+            uri = utils.posix_path(vim.api.nvim_buf_get_name(0)),
             text_objs = {},
             children = {},
         }
@@ -66,27 +66,27 @@ function Diagnostics_Parser.get_diagnostics_entries()
 
         if source ~= "" then
             entry.text_objs[1] = {
-                text = Utils.format_entry_str(source) .. ": ",
-                hl_group = Config.diagnostics_source_highlight_group,
+                text = utils.format_entry_str(source) .. ": ",
+                hl_group = config.diagnostics_source_highlight_group,
             }
         else
             entry.text_objs[1] = {
-                text = Config.unknown_diagnostics_source .. ": ",
-                hl_group = Config.unknown_diagnostics_source_highlight_group,
+                text = config.unknown_diagnostics_source .. ": ",
+                hl_group = config.unknown_diagnostics_source_highlight_group,
             }
         end
 
         entry.text_objs[2] = {
-            text = Utils.format_entry_str(diagnostic.message),
+            text = utils.format_entry_str(diagnostic.message),
             hl_group = hl_group(diagnostic),
         }
 
-        local code_str = Utils.format_entry_str(diagnostic.code)
+        local code_str = utils.format_entry_str(diagnostic.code)
 
         if code_str ~= "" then
             entry.text_objs[3] = {
                 text = " [" .. code_str .. "]",
-                hl_group = Config.diagnostics_code_highlight_group,
+                hl_group = config.diagnostics_code_highlight_group,
             }
         end
 
@@ -117,13 +117,13 @@ function Diagnostics_Parser.get_diagnostics_entries()
                     table.insert(entry.children, child)
 
                     child.text_objs[1] = {
-                        text = Utils.format_entry_str(lsp.code),
-                        hl_group = Config.diagnostics_url_code_highlight_group or hl_group(diagnostic),
+                        text = utils.format_entry_str(lsp.code),
+                        hl_group = config.diagnostics_url_code_highlight_group or hl_group(diagnostic),
                     }
 
                     child.text_objs[2] = {
-                        text = " (" .. Utils.format_entry_str(lsp.codeDescription.href) .. ")",
-                        hl_group = Config.diagnostics_url_highlight_group,
+                        text = " (" .. utils.format_entry_str(lsp.codeDescription.href) .. ")",
+                        hl_group = config.diagnostics_url_highlight_group,
                     }
                 end
             end
@@ -139,30 +139,30 @@ function Diagnostics_Parser.get_diagnostics_entries()
                         if type(location.uri) == "string" then
                             ---@type Diagnostics_Entry
                             local child = {
-                                uri = Utils.posix_path(location.uri),
+                                uri = utils.posix_path(location.uri),
                                 text_objs = {},
                             }
 
                             table.insert(entry.children, child)
 
                             child.text_objs[1] = {
-                                text = Utils.format_entry_str(child.uri:match("^.+/(.+)$")),
-                                hl_group = Config.diagnostics_source_file_highlight_group,
+                                text = utils.format_entry_str(child.uri:match("^.+/(.+)$")),
+                                hl_group = config.diagnostics_source_file_highlight_group,
                             }
 
                             child.text_objs[2] = {
                                 text = "",
-                                hl_group = Config.diagnostics_source_file_highlight_group,
+                                hl_group = config.diagnostics_source_file_highlight_group,
                             }
 
                             if message ~= "" then
                                 child.text_objs[3] = {
                                     text = ": ",
-                                    hl_group = Config.default_text_highlight_group,
+                                    hl_group = config.default_text_highlight_group,
                                 }
 
                                 child.text_objs[4] = {
-                                    text = Utils.format_entry_str(message),
+                                    text = utils.format_entry_str(message),
                                     hl_group = hl_group(diagnostic),
                                 }
                             end
