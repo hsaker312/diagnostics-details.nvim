@@ -17,9 +17,17 @@ function Utils.posix_path(path)
 end
 
 function Utils.decode_uri(str)
-    return str:gsub("%%(%x%x)", function(hex)
+    local res = str:gsub("%%(%x%x)", function(hex)
         return string.char(tonumber(hex, 16))
     end)
+
+    if package.cpath:match("%p[\\|/]?%p(%a+)") == "dll" then
+        if res:match("^/") then
+            res = res:sub(2, res:len())
+        end
+    end
+
+    return res
 end
 
 ---@param value any
